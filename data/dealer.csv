@@ -1,0 +1,8 @@
+dealer_id,name,phone,email,city
+D001,Utrecht Auto Centre,+31 30 123 4567,sales@utrechtauto.example,Utrecht
+D002,Amsterdam Premium Motors,+31 20 234 5678,sales@amsterdammotors.example,Amsterdam
+D003,Rotterdam Auto House,+31 10 345 6789,hello@rotterdamauto.example,Rotterdam
+D004,The Hague Motor Centre,+31 70 456 7890,sales@haguemotors.example,The Hague
+D005,Eindhoven Luxury Cars,+31 40 567 8901,contact@eindhovencars.example,Eindhoven
+D006,Amsterdam EV Centre,+31 20 678 9012,ev@amsterdamev.example,Amsterdam
+D007,Utrecht Mobility,+31 30 789 0123,hello@utrechtmobility.example,Utrecht

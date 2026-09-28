@@ -1,0 +1,16 @@
+car_id,make,model,variant,year,price,dealer_id
+C001,Toyota,Corolla,1.8 Hybrid Dynamic,2025,32900,D001
+C002,Toyota,Corolla,2.0 Hybrid GR Sport,2025,37500,D001
+C003,Toyota,RAV4,2.5 Hybrid Executive,2024,44900,D001
+C004,BMW,3 Series,330i M Sport,2025,48900,D002
+C005,BMW,X3,xDrive30e M Sport,2024,57900,D002
+C006,Honda,Civic,2.0 eHEV Advance,2025,35900,D003
+C007,Honda,CR-V,2.0 Hybrid Executive,2024,46900,D003
+C008,Volkswagen,Golf,1.5 eTSI Style,2025,34900,D004
+C009,Volkswagen,Tiguan,1.5 eHybrid R-Line,2025,48900,D004
+C010,Mercedes-Benz,C-Class,C300e AMG Line,2024,55900,D005
+C011,Mercedes-Benz,GLC,300e 4MATIC AMG Line,2025,65900,D005
+C012,Tesla,Model 3,Long Range AWD,2025,47990,D006
+C013,Tesla,Model Y,Long Range AWD,2025,52990,D006
+C014,Hyundai,Tucson,1.6 T-GDI Hybrid,2025,41900,D007
+C015,Kia,Sportage,1.6 T-GDI Hybrid GT-Line,2025,42900,D007
