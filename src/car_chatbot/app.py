@@ -4,7 +4,10 @@ from datetime import date, datetime
 import streamlit as st
 
 from car_chatbot.data import get_car_with_dealer, search_cars
-from car_chatbot.search import understand_car_request
+from car_chatbot.search import (
+    recommend_alternatives,
+    understand_car_request,
+)
 
 
 logging.basicConfig(
@@ -14,29 +17,36 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+
 st.set_page_config(
     page_title="Car Dealer Assistant",
-    page_icon="🚗",
     layout="centered",
 )
 
 
 def reset_search() -> None:
     """Clear the current search and selection."""
+    st.session_state.original_request = None
     st.session_state.results = None
     st.session_state.selected_car = None
+    st.session_state.search_request = None
     st.session_state.show_dealer = False
     st.session_state.schedule_call = False
+    st.session_state.fallback_used = False
 
 
 def initialize_state() -> None:
     """Initialize Streamlit session state."""
     defaults = {
+        "original_request": None,
         "results": None,
         "selected_car": None,
+        "search_request": None,
         "show_dealer": False,
         "schedule_call": False,
         "fallback_used": False,
+        "is_processing": False,
+        "pending_message": None,
     }
 
     for key, value in defaults.items():
@@ -46,18 +56,30 @@ def initialize_state() -> None:
 
 initialize_state()
 
-st.title("🚗 Car Dealer Assistant")
+
+st.title("Car Dealer Assistant")
+
 st.write(
     "Tell me which car you're looking for. "
     "I'll check the available inventory and connect you with the dealer."
 )
 
+
 user_message = st.chat_input(
-    "For example: I'm looking for a Toyota Corolla hybrid"
+    "For example: I'm looking for a Toyota Corolla hybrid",
+    disabled=st.session_state.is_processing,
 )
 
-if user_message:
+if user_message and not st.session_state.is_processing:
+    st.session_state.pending_message = user_message
+    st.session_state.is_processing = True
+    st.rerun()
+
+if st.session_state.is_processing and st.session_state.pending_message:
+    user_message = st.session_state.pending_message
+
     reset_search()
+    st.session_state.original_request = user_message
 
     with st.chat_message("user"):
         st.write(user_message)
@@ -68,97 +90,138 @@ if user_message:
                 user_message
             )
 
+            st.session_state.search_request = search_request
             st.session_state.fallback_used = fallback_used
 
-            if not any(
+            has_request_information = any(
                 [
                     search_request.make,
                     search_request.model,
                     search_request.variant,
+                    search_request.preferences,
                 ]
-            ):
+            )
+
+            if not has_request_information:
                 st.warning(
-                    "I couldn't identify a specific car from that request. "
-                    "Please include a make or model, for example "
-                    "'Toyota Corolla' or 'BMW X3'."
+                    "I couldn't understand enough about the car "
+                    "you're looking for. Try mentioning a make, "
+                    "model, body type, fuel type, or feature."
                 )
+
             else:
-                results = search_cars(
-                    make=search_request.make,
-                    model=search_request.model,
-                    variant=search_request.variant,
+                has_vehicle_identity = any(
+                    [
+                        search_request.make,
+                        search_request.model,
+                        search_request.variant,
+                    ]
                 )
+
+                if has_vehicle_identity:
+                    results = search_cars(
+                        make=search_request.make,
+                        model=search_request.model,
+                        variant=search_request.variant,
+                    )
+
+                    if results.empty:
+                        results = recommend_alternatives(
+                            user_message,
+                            limit=3,
+                        )
+
+                        if not results.empty:
+                            st.warning(
+                                "The exact car you're looking for "
+                                "isn't available in the current "
+                                "inventory. Here are some available "
+                                "alternatives you may want to consider."
+                            )
+
+                else:
+                    results = recommend_alternatives(
+                        user_message,
+                        limit=3,
+                    )
+
+                    if not results.empty:
+                        st.info(
+                            "I found these available cars based on "
+                            "what you're looking for."
+                        )
 
                 st.session_state.results = results
 
     except FileNotFoundError:
         logger.exception("Inventory data could not be loaded.")
+
         st.error(
             "The inventory data is currently unavailable. "
             "Please try again later."
         )
 
     except Exception:
-        logger.exception("Unexpected error while searching for cars.")
+        logger.exception(
+            "Unexpected error while searching for cars."
+        )
         st.error(
             "Something went wrong while searching the inventory. "
             "Please try again."
         )
-    st.session_state.fallback_used = fallback_used
 
-#can be used to show the banner for Gemini fall back
+    finally:
+        st.session_state.pending_message = None
+        st.session_state.is_processing = False
 
-#if st.session_state.fallback_used:
-#   st.info(
-#        "AI assistance is temporarily unavailable. "
-#       "Basic inventory search is being used instead."
-#   )
+
+
+if st.session_state.fallback_used:
+    st.info(
+        "AI assistance is temporarily unavailable. "
+        "Basic inventory matching is being used instead."
+    )
 
 
 results = st.session_state.results
 
-if results is not None:
-    if results.empty:
-        st.warning(
-            "I couldn't find a matching car in the current inventory. "
-            "Try another make, model, or a broader search."
+
+if results is not None and not results.empty:
+    st.subheader("Available Cars")
+
+    options = {}
+
+    for index, car in results.iterrows():
+        label = (
+            f"{car['year']} {car['make']} {car['model']} "
+            f"— {car['variant']} — €{car['price']:,.0f}"
         )
 
-    else:
-        st.subheader("Available Cars")
+        options[label] = index
 
-        options = {}
+    selected_label = st.selectbox(
+        "Choose a car:",
+        list(options.keys()),
+    )
 
-        for index, car in results.iterrows():
-            label = (
-                f"{car['year']} {car['make']} {car['model']} "
-                f"— {car['variant']} — €{car['price']:,.0f}"
-            )
+    if st.button(
+        "Select this car",
+        type="primary",
+        use_container_width=True,
+    ):
+        selected_index = options[selected_label]
+        selected_row = results.loc[selected_index]
 
-            options[label] = index
-
-        selected_label = st.selectbox(
-            "Choose a car:",
-            options.keys(),
+        st.session_state.selected_car = get_car_with_dealer(
+            selected_row
         )
 
-        if st.button(
-            "Select this car",
-            type="primary",
-            use_container_width=True,
-        ):
-            selected_index = options[selected_label]
-            selected_row = results.loc[selected_index]
-
-            st.session_state.selected_car = get_car_with_dealer(
-                selected_row
-            )
-
-            st.session_state.show_dealer = False
-            st.session_state.schedule_call = False
+        st.session_state.show_dealer = False
+        st.session_state.schedule_call = False
 
 
 selected = st.session_state.selected_car
+
 
 if selected:
     car = selected["car"]
@@ -171,8 +234,14 @@ if selected:
     st.write(
         f"**{car['year']} {car['make']} {car['model']}**"
     )
-    st.write(f"Variant: {car['variant']}")
-    st.write(f"Price: €{car['price']:,.0f}")
+
+    st.write(
+        f"Variant: {car['variant']}"
+    )
+
+    st.write(
+        f"Price: €{car['price']:,.0f}"
+    )
 
     if dealer is None:
         st.error(
@@ -207,10 +276,21 @@ if selected:
         if st.session_state.show_dealer:
             st.subheader("Dealer Details")
 
-            st.write(f"**Name:** {dealer['name']}")
-            st.write(f"**City:** {dealer['city']}")
-            st.write(f"**Phone:** {dealer['phone']}")
-            st.write(f"**Email:** {dealer['email']}")
+            st.write(
+                f"**Name:** {dealer['name']}"
+            )
+
+            st.write(
+                f"**City:** {dealer['city']}"
+            )
+
+            st.write(
+                f"**Phone:** {dealer['phone']}"
+            )
+
+            st.write(
+                f"**Email:** {dealer['email']}"
+            )
 
 
         if st.session_state.schedule_call:
@@ -245,9 +325,11 @@ if selected:
                     st.write(
                         f"**Dealer:** {dealer['name']}"
                     )
+
                     st.write(
                         f"**Phone:** {dealer['phone']}"
                     )
+
                     st.write(
                         "**Requested time:** "
                         f"{appointment.strftime('%d %B %Y at %H:%M')}"
