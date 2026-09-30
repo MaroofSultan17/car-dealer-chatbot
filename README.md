@@ -345,6 +345,59 @@ LLM behavior is mocked where appropriate so automated tests remain repeatable an
 
 ---
 
+## Web App (React and FastAPI)
+
+The same search also runs as a web app, so it can be deployed on Vercel. Streamlit needs a long running server, which Vercel does not give.
+
+* `app.py` is the entry point Vercel looks for. It loads the FastAPI app from `src/car_chatbot/main.py`.
+* `frontend/` is a React app built with Vite. Vercel builds it into `public/` and serves it as static files.
+* The API reuses the existing search code. The Streamlit app still works as before.
+
+### Run with Docker
+
+docker compose up --build
+
+Open http://localhost:5173 for the app. Port 8000 is the API only, so `/` there returns Not Found. The API docs are at http://localhost:8000/docs. The key is read from `.env`.
+
+Python packages are installed once when the image is built. Run with `--build` again after changing `pyproject.toml`.
+
+Run the tests in the container:
+
+docker compose exec api python -m pytest
+
+### Run without Docker
+
+pip install -e ".[dev]"
+uvicorn app:app --port 8000
+
+In a second terminal:
+
+cd frontend
+npm install
+npm run dev
+
+Check the frontend with `npm run check` (format, lint, types, build).
+
+### API
+
+Base URL: `/api/v1`
+
+| Method | Endpoint | Payload | Response |
+| --- | --- | --- | --- |
+| POST | `/cars/search` | `{"message": "Toyota Corolla hybrid"}` | `{"cars": [...], "notices": [...]}` |
+
+* `message` is required, 1 to 500 characters. The frontend uses the same limit.
+* Each car has its dealer and `priceInCents`. Prices are whole cents, never floats.
+* Extra fields in the request are ignored.
+* Errors: 422 invalid payload, 415 when the body is not JSON, 405 wrong method, 503 when the inventory cannot be loaded.
+
+### Limitations
+
+* No rate limiting yet. Every search can call the LLM, so a limit per IP should be added before real traffic. On Vercel it needs a shared store like Redis, because each function instance has its own memory.
+* Call scheduling is a demo in the browser only. Nothing is sent to the dealer.
+
+---
+
 ## Security
 
 - API credentials are stored in environment variables.

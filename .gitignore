@@ -22,3 +22,7 @@ __pycache__/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Frontend
+public/
+node_modules/
