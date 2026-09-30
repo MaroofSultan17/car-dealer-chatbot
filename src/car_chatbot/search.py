@@ -1,48 +1,69 @@
 import logging
 
+import pandas as pd
+
 from car_chatbot.data import load_cars
-from car_chatbot.llm import extract_car_search
+from car_chatbot.llm import (
+    extract_car_search,
+    recommend_inventory_cars,
+)
 from car_chatbot.models import CarSearch
 
 logger = logging.getLogger(__name__)
 
 
 def fallback_car_search(user_message: str) -> CarSearch:
-    """Extract basic car information using the local inventory."""
-    message = user_message.lower()
+    """
+    Perform basic literal matching against local inventory.
+
+    The fallback does not try to reproduce full LLM reasoning.
+    If no inventory make/model/variant can be identified, the
+    original request is preserved as a preference so the
+    application can still handle it gracefully.
+    """
+    message = user_message.strip()
+    message_lower = message.lower()
+
+    if not message:
+        return CarSearch()
+
     cars = load_cars()
 
     make = None
     model = None
     variant = None
 
-    # Match known makes.
     for value in cars["make"].dropna().unique():
-        if str(value).lower() in message:
+        if str(value).lower() in message_lower:
             make = str(value)
             break
 
-    # Match known models.
     for value in cars["model"].dropna().unique():
-        if str(value).lower() in message:
+        if str(value).lower() in message_lower:
             model = str(value)
             break
 
-    # Variant matching is intentionally broader because users may say
-    # "hybrid" instead of the complete inventory variant name.
-    variant_keywords = [
-        "hybrid",
-        "m sport",
-        "amg line",
-        "long range",
-        "r-line",
-        "gt-line",
-        "gr sport",
-    ]
+    for value in cars["variant"].dropna().unique():
+        if str(value).lower() in message_lower:
+            variant = str(value)
+            break
 
-    for keyword in variant_keywords:
-        if keyword in message:
-            variant = keyword
+    preferences = []
+
+    if not any([make, model, variant]):
+        preferences.append(message)
+
+    return CarSearch(
+        make=make,
+        model=model,
+        variant=variant,
+        preferences=preferences,
+    )
+
+
+    for value in cars["variant"].dropna().unique():
+        if str(value).lower() in message:
+            variant = str(value)
             break
 
     return CarSearch(
@@ -52,13 +73,14 @@ def fallback_car_search(user_message: str) -> CarSearch:
     )
 
 
-def understand_car_request(user_message: str) -> tuple[CarSearch, bool]:
+def understand_car_request(
+    user_message: str,
+) -> tuple[CarSearch, bool]:
     """
-    Understand a car request with Gemini first.
+    Understand a car request using Gemini.
 
-    Returns:
-        A CarSearch object and a boolean indicating whether
-        the local fallback was used.
+    Falls back to literal inventory matching if Gemini
+    is temporarily unavailable.
     """
     try:
         search = extract_car_search(user_message)
@@ -71,4 +93,53 @@ def understand_car_request(user_message: str) -> tuple[CarSearch, bool]:
         )
 
         search = fallback_car_search(user_message)
+
         return search, True
+
+
+def recommend_alternatives(
+    user_message: str,
+    limit: int = 3,
+) -> pd.DataFrame:
+    """
+    Recommend real inventory vehicles for an unavailable request.
+
+    Gemini ranks the inventory semantically, but every returned
+    recommendation is validated against the local CSV.
+    """
+    cars = load_cars()
+
+    if cars.empty:
+        return cars
+
+    try:
+        recommended_ids = recommend_inventory_cars(
+            user_message=user_message,
+            cars=cars,
+            limit=limit,
+        )
+
+        if recommended_ids:
+            ranked_cars = []
+
+            for car_id in recommended_ids[:limit]:
+                match = cars[cars["car_id"] == car_id]
+
+                if not match.empty:
+                    ranked_cars.append(match.iloc[0])
+
+            if ranked_cars:
+                return pd.DataFrame(ranked_cars).reset_index(
+                    drop=True
+                )
+
+    except Exception:
+        logger.warning(
+            "Gemini recommendation failed. "
+            "Using basic inventory alternatives.",
+            exc_info=True,
+        )
+
+    # Graceful fallback:
+    # don't return arbitrary cars
+    return cars.iloc[0:0].copy()
