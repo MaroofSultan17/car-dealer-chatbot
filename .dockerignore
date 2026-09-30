@@ -2,6 +2,5 @@
 .venv
 .env
 frontend
-public
 **/__pycache__
 **/*.egg-info

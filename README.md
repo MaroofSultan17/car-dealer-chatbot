@@ -350,7 +350,7 @@ LLM behavior is mocked where appropriate so automated tests remain repeatable an
 The same search also runs as a web app, so it can be deployed on Vercel. Streamlit needs a long running server, which Vercel does not give.
 
 * `app.py` is the entry point Vercel looks for. It loads the FastAPI app from `src/car_chatbot/main.py`.
-* `frontend/` is a React app built with Vite. Vercel builds it into `public/` and serves it as static files.
+* `frontend/` is a React app built with Vite. Vercel builds it into `frontend/dist`, and FastAPI serves those files, so the page and the API share one URL.
 * The API reuses the existing search code. The Streamlit app still works as before.
 
 ### Run with Docker

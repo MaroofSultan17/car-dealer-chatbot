@@ -24,5 +24,4 @@ __pycache__/
 Thumbs.db
 
 # Frontend
-public/
 node_modules/
