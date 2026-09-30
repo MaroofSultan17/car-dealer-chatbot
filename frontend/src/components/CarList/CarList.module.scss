@@ -1,0 +1,63 @@
+@use '../../styles/tokens' as *;
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.card {
+  @include card;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+  padding: 14px 16px;
+
+  &[data-selected='true'] {
+    border-color: $color-accent;
+  }
+
+  @include below($breakpoint-md) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.name {
+  font-size: 1.05rem;
+}
+
+.variant {
+  color: $color-muted;
+  font-size: 0.9rem;
+}
+
+.buy {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+
+  @include below($breakpoint-md) {
+    justify-content: space-between;
+  }
+}
+
+.price {
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.selectButton {
+  @include secondary-button;
+}

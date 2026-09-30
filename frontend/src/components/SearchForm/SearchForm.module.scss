@@ -1,0 +1,41 @@
+@use '../../styles/tokens' as *;
+
+.form {
+  @include card;
+
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  padding: 20px;
+}
+
+.label {
+  font-weight: 700;
+}
+
+.row {
+  display: flex;
+  gap: $space-sm;
+
+  @include below($breakpoint-md) {
+    flex-direction: column;
+  }
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid $color-border;
+  border-radius: $radius-sm;
+  background: $color-bg;
+  color: $color-text;
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+.submitButton {
+  @include primary-button;
+}

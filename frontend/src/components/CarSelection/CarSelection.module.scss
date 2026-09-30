@@ -1,0 +1,114 @@
+@use '../../styles/tokens' as *;
+
+.panel {
+  @include card;
+
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+}
+
+.title {
+  font-size: 1.2rem;
+}
+
+.car {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.carName {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.muted {
+  color: $color-muted;
+}
+
+.error {
+  padding: 10px 12px;
+  border-radius: $radius-sm;
+  background: $color-danger-soft;
+  color: $color-danger;
+  font-weight: 600;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-sm;
+
+  @include below($breakpoint-md) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.actionButton {
+  @include secondary-button;
+}
+
+.details {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px $space-md;
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid $color-border;
+
+  dt {
+    color: $color-muted;
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  a {
+    color: $color-accent;
+  }
+}
+
+.scheduleForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid $color-border;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+    font-weight: 600;
+  }
+
+  input {
+    padding: 10px 12px;
+    border: 1px solid $color-border;
+    border-radius: $radius-sm;
+    background: $color-bg;
+    color: $color-text;
+  }
+}
+
+.confirmButton {
+  @include primary-button;
+}
+
+.confirmation {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  padding: 14px 16px;
+  border-radius: $radius-md;
+  background: $color-success-soft;
+}
+
+.confirmationTitle {
+  color: $color-success;
+  font-weight: 800;
+}

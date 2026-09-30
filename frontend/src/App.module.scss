@@ -1,0 +1,59 @@
+@use './styles/tokens' as *;
+
+.layout {
+  max-width: $page-width;
+  margin: 0 auto;
+  padding: $space-xl $space-lg;
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+
+  @include below($breakpoint-md) {
+    padding: $space-lg $space-md;
+  }
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.title {
+  font-size: 1.8rem;
+}
+
+.sectionTitle {
+  margin-bottom: 12px;
+  font-size: 1.2rem;
+}
+
+.muted {
+  color: $color-muted;
+}
+
+.request {
+  color: $color-muted;
+}
+
+.error {
+  padding: 10px 12px;
+  border-radius: $radius-sm;
+  background: $color-danger-soft;
+  color: $color-danger;
+  font-weight: 600;
+}
+
+.notice {
+  padding: 10px 14px;
+  border-radius: $radius-sm;
+
+  &[data-level='info'] {
+    background: $color-accent-soft;
+  }
+
+  &[data-level='warning'] {
+    background: $color-warning-soft;
+    color: $color-warning-text;
+  }
+}
