@@ -33,6 +33,8 @@ def reset_search() -> None:
     st.session_state.show_dealer = False
     st.session_state.schedule_call = False
     st.session_state.fallback_used = False
+    st.session_state.result_message = None
+    st.session_state.result_message_type = None
 
 
 def initialize_state() -> None:
@@ -47,6 +49,8 @@ def initialize_state() -> None:
         "fallback_used": False,
         "is_processing": False,
         "pending_message": None,
+        "result_message": None,
+        "result_message_type": None,
     }
 
     for key, value in defaults.items():
@@ -76,7 +80,7 @@ user_message = st.chat_input(
 
 
 # Store the request first and immediately rerun.
-# On the next run the input will be disabled while processing.
+# On the next run the input is disabled while processing.
 if user_message and not st.session_state.is_processing:
     st.session_state.pending_message = user_message
     st.session_state.is_processing = True
@@ -95,9 +99,6 @@ if (
 
     reset_search()
     st.session_state.original_request = user_message
-
-    with st.chat_message("user"):
-        st.write(user_message)
 
     try:
         with st.spinner("Checking available cars..."):
@@ -118,11 +119,12 @@ if (
             )
 
             if not has_request_information:
-                st.warning(
+                st.session_state.result_message = (
                     "I couldn't understand enough about the car "
                     "you're looking for. Try mentioning a make, "
                     "model, body type, fuel type, or feature."
                 )
+                st.session_state.result_message_type = "warning"
 
             else:
                 has_vehicle_identity = any(
@@ -147,11 +149,25 @@ if (
                         )
 
                         if not results.empty:
-                            st.warning(
+                            st.session_state.result_message = (
                                 "The exact car you're looking for "
                                 "isn't available in the current "
                                 "inventory. Here are some available "
                                 "alternatives you may want to consider."
+                            )
+                            st.session_state.result_message_type = (
+                                "warning"
+                            )
+
+                        else:
+                            st.session_state.result_message = (
+                                "The exact car you're looking for "
+                                "isn't available, and I couldn't find "
+                                "a suitable alternative in the current "
+                                "inventory."
+                            )
+                            st.session_state.result_message_type = (
+                                "warning"
                             )
 
                 else:
@@ -161,9 +177,19 @@ if (
                     )
 
                     if not results.empty:
-                        st.info(
+                        st.session_state.result_message = (
                             "I found these available cars based on "
                             "what you're looking for."
+                        )
+                        st.session_state.result_message_type = "info"
+
+                    else:
+                        st.session_state.result_message = (
+                            "I couldn't find a suitable car matching "
+                            "your preferences in the current inventory."
+                        )
+                        st.session_state.result_message_type = (
+                            "warning"
                         )
 
                 st.session_state.results = results
@@ -173,29 +199,63 @@ if (
             "Inventory data could not be loaded."
         )
 
-        st.error(
+        st.session_state.result_message = (
             "The inventory data is currently unavailable. "
             "Please try again later."
         )
+        st.session_state.result_message_type = "error"
 
     except Exception:
         logger.exception(
             "Unexpected error while searching for cars."
         )
 
-        st.error(
+        st.session_state.result_message = (
             "Something went wrong while searching the inventory. "
             "Please try again."
         )
+        st.session_state.result_message_type = "error"
 
     finally:
         st.session_state.pending_message = None
         st.session_state.is_processing = False
 
-    # Important:
-    # redraw the application after processing finishes so the
-    # chat input becomes enabled again.
+    # Rerun after processing so the search input becomes
+    # enabled again while keeping the completed search state.
     st.rerun()
+
+
+# ---------------------------------------------------------
+# SHOW LATEST USER REQUEST
+# ---------------------------------------------------------
+
+if (
+    st.session_state.original_request
+    and not st.session_state.is_processing
+):
+    with st.chat_message("user"):
+        st.write(st.session_state.original_request)
+
+
+# ---------------------------------------------------------
+# SEARCH RESULT MESSAGE
+# ---------------------------------------------------------
+
+if st.session_state.result_message:
+    if st.session_state.result_message_type == "warning":
+        st.warning(
+            st.session_state.result_message
+        )
+
+    elif st.session_state.result_message_type == "info":
+        st.info(
+            st.session_state.result_message
+        )
+
+    elif st.session_state.result_message_type == "error":
+        st.error(
+            st.session_state.result_message
+        )
 
 
 # ---------------------------------------------------------
