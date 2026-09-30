@@ -65,17 +65,32 @@ st.write(
 )
 
 
+# ---------------------------------------------------------
+# SEARCH INPUT
+# ---------------------------------------------------------
+
 user_message = st.chat_input(
     "For example: I'm looking for a Toyota Corolla hybrid",
     disabled=st.session_state.is_processing,
 )
 
+
+# Store the request first and immediately rerun.
+# On the next run the input will be disabled while processing.
 if user_message and not st.session_state.is_processing:
     st.session_state.pending_message = user_message
     st.session_state.is_processing = True
     st.rerun()
 
-if st.session_state.is_processing and st.session_state.pending_message:
+
+# ---------------------------------------------------------
+# PROCESS SEARCH REQUEST
+# ---------------------------------------------------------
+
+if (
+    st.session_state.is_processing
+    and st.session_state.pending_message
+):
     user_message = st.session_state.pending_message
 
     reset_search()
@@ -154,7 +169,9 @@ if st.session_state.is_processing and st.session_state.pending_message:
                 st.session_state.results = results
 
     except FileNotFoundError:
-        logger.exception("Inventory data could not be loaded.")
+        logger.exception(
+            "Inventory data could not be loaded."
+        )
 
         st.error(
             "The inventory data is currently unavailable. "
@@ -165,6 +182,7 @@ if st.session_state.is_processing and st.session_state.pending_message:
         logger.exception(
             "Unexpected error while searching for cars."
         )
+
         st.error(
             "Something went wrong while searching the inventory. "
             "Please try again."
@@ -174,7 +192,15 @@ if st.session_state.is_processing and st.session_state.pending_message:
         st.session_state.pending_message = None
         st.session_state.is_processing = False
 
+    # Important:
+    # redraw the application after processing finishes so the
+    # chat input becomes enabled again.
+    st.rerun()
 
+
+# ---------------------------------------------------------
+# FALLBACK INFORMATION
+# ---------------------------------------------------------
 
 if st.session_state.fallback_used:
     st.info(
@@ -182,6 +208,10 @@ if st.session_state.fallback_used:
         "Basic inventory matching is being used instead."
     )
 
+
+# ---------------------------------------------------------
+# SEARCH RESULTS
+# ---------------------------------------------------------
 
 results = st.session_state.results
 
@@ -219,6 +249,10 @@ if results is not None and not results.empty:
         st.session_state.show_dealer = False
         st.session_state.schedule_call = False
 
+
+# ---------------------------------------------------------
+# SELECTED CAR
+# ---------------------------------------------------------
 
 selected = st.session_state.selected_car
 
@@ -273,6 +307,10 @@ if selected:
                 st.session_state.show_dealer = False
 
 
+        # -------------------------------------------------
+        # DEALER DETAILS
+        # -------------------------------------------------
+
         if st.session_state.show_dealer:
             st.subheader("Dealer Details")
 
@@ -292,6 +330,10 @@ if selected:
                 f"**Email:** {dealer['email']}"
             )
 
+
+        # -------------------------------------------------
+        # SCHEDULE CALL
+        # -------------------------------------------------
 
         if st.session_state.schedule_call:
             st.subheader("Schedule a Dealer Call")
